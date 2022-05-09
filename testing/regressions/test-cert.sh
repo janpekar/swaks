@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 #CERT=signed.example.com
 #CERT=san-only.example.com
