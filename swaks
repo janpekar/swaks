@@ -439,12 +439,14 @@ sub start_tls {
 		my $preverify_ok = shift;
 		my $x509_ctx     = shift;
 		my @failures     = ();
+my $x = Net::SSLeay::X509_STORE_CTX_get_current_cert($x509_ctx);
+print STDERR "CALLING CTX_set_verify: " . Net::SSLeay::X509_NAME_oneline(Net::SSLeay::X509_get_subject_name($x)) . "\n";
 
 		# this callback is called twice and I can't figure out why.  The first seems to have the values I want
 		# to see, so if we're called multiple times, use the status from the first call
-		if (defined($t{server_cert_verification_status})) {
-			return $t{server_cert_verification_status};
-		}
+		# if (defined($t{server_cert_verification_status})) {
+		# 	return $t{server_cert_verification_status};
+		# }
 
 		# we don't have to do the ca verification, that's handled before we get here
 		if ($preverify_ok) {
@@ -459,18 +461,32 @@ sub start_tls {
 			push(@failures, "no host available for host verification");
 		}
 		else {
+# print "CALLING Net::SSLeay::X509_STORE_CTX_get_current_cert\n";
 			my $x509 = Net::SSLeay::X509_STORE_CTX_get_current_cert($x509_ctx);
+# print "RETURN  Net::SSLeay::X509_STORE_CTX_get_current_cert\n";
 			if ($t{server_cert_host_target} =~ /(:|^\d+\.\d+\.\d+\.\d+$)/) {
 				# verify as an IP
+# print "CALLING Net::SSLeay::X509_check_ip_asc\n";
 				if (Net::SSLeay::X509_check_ip_asc($x509, $t{server_cert_host_target}, 0) == 1) {
 					$t{server_cert_verified_host} = 1;
 				}
+# print "RETURN  Net::SSLeay::X509_check_ip_asc\n";
 			}
 			else {
 				# verify as a hostname
+# $Net::SSLeay::trace = 3;
+# my $peername;
+# my $res = Net::SSLeay::X509_check_host($x509, $t{server_cert_host_target}, 0, $peername);
+# print "\$res = $res\n";
+# print "\$peername = $peername\n";
+# print "CALLING Net::SSLeay::X509_check_host\n";
 				if (Net::SSLeay::X509_check_host($x509, $t{server_cert_host_target}, 0) == 1) {
 					$t{server_cert_verified_host} = 1;
 				}
+# print "RETURN  Net::SSLeay::X509_check_host\n";
+# else {
+# 	print STDERR "FAILED X509_check_host with $t{server_cert_host_target}\n";
+# }
 			}
 
 			if (!$t{server_cert_verified_host}) {
@@ -480,6 +496,8 @@ sub start_tls {
 
 		$t{verify_failure_message} = join(', ', @failures);
 
+print STDERR "STATUS: ca = $t{server_cert_verified_ca}, host = $t{server_cert_verified_host}\n";
+# print STDERR "RETURN  CTX_set_verify\n";
 		if ($G::tls_verify_ca && !$t{server_cert_verified_ca}) {
 			$t{server_cert_verification_status} = 0;
 			return 0;
